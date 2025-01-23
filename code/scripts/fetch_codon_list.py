@@ -2,10 +2,10 @@ import json
 
 import requests
 
-AUTHORIZATION_TOKEN = ''
-COSMIC_SESSION = ''
-SESSION_ID = ''
-PAGE_SMITH = ''
+AUTHORIZATION_TOKEN = "0CkjUjCriY5LLzjnpSQytfornIgvl8"
+COSMIC_SESSION = "96108356628820926567062982366841651"
+SESSION_ID = "0mh6616d79psw64z2i81tm6i2bgsjubg"
+PAGE_SMITH = "%7B%22z%22%3A%22n%22%2C%22a%22%3A%22e%22%7D"
 
 
 def x(gene_name):
@@ -13,11 +13,11 @@ def x(gene_name):
 
     payload = {}
     headers = {
-        'accept': 'application/json, text/plain, */*',
-        'accept-language': 'en-US,en;q=0.9,fa;q=0.8',
-        'authorization': f'Bearer {AUTHORIZATION_TOKEN}',
-        # 'cookie': '',
-        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "en-US,en;q=0.9,fa;q=0.8",
+        "authorization": f"Bearer {AUTHORIZATION_TOKEN}",
+        # "cookie": "",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     }
 
     response = requests.request(method="GET",
@@ -25,28 +25,28 @@ def x(gene_name):
                                 headers=headers,
                                 data=payload,
                                 cookies={
-                                    'Pagesmith': PAGE_SMITH,
-                                    'cosmic_session': COSMIC_SESSION,
-                                    # 'CookieControl': '{"necessaryCookies":["cosmic_session","genome_version","ordering-*","visibility-*","_hjIncludedInSample","Pagesmith","piwik_ignore"],"optionalCookies":{},"initialState":{"type":"closed"},"statement":{},"consentDate":1731584416661,"consentExpiry":180,"interactedWith":true,"user":"XXXX"}',
-                                    'sessionid': SESSION_ID,
+                                    "Pagesmith": PAGE_SMITH,
+                                    "cosmic_session": COSMIC_SESSION,
+                                    # "CookieControl": "{\"necessaryCookies\":[\"cosmic_session\",\"genome_version\",\"ordering-*\",\"visibility-*\",\"_hjIncludedInSample\",\"Pagesmith\",\"piwik_ignore\"],\"optionalCookies\":{},\"initialState\":{\"type\":\"closed\"},\"statement\":{},\"consentDate\":1731584416661,\"consentExpiry\":180,\"interactedWith\":true,\"user\":\"XXXX\"}",
+                                    "sessionid": SESSION_ID,
                                 })
     # print(response.text)
     response.raise_for_status()
 
     data = response.json()
-    references = data.get('bokeh', dict()).get('doc', dict()).get('roots', dict()).get('references', list())
+    references = data.get("bokeh", dict()).get("doc", dict()).get("roots", dict()).get("references", list())
     cds = [reference for reference in references if reference["type"] == "ColumnDataSource"][0]
-    cds_data = cds.get('attributes', dict()).get('data', dict())
+    cds_data = cds.get("attributes", dict()).get("data", dict())
     # print(cds_data)
-    aa_pos = cds_data.get('aa_pos', list())
-    # shield_col_bar_fill_colour = cds_data.get('shield_col_bar_fill_colour', list())
-    shield_col_raw = cds_data.get('shield_col_raw', list())
+    aa_pos = cds_data.get("aa_pos", list())
+    # shield_col_bar_fill_colour = cds_data.get("shield_col_bar_fill_colour", list())
+    shield_col_raw = cds_data.get("shield_col_raw", list())
 
     result = dict()
     for pos, tier in zip(aa_pos, shield_col_raw):
-        if tier.lower() == 'other':
+        if tier.lower() == "other":
             continue
-        n = int(tier.lower().replace('tier ', '')) if tier.lower() != 'other' else 0
+        n = int(tier.lower().replace("tier ", "")) if tier.lower() != "other" else 0
         result[pos] = n
     return result
 
@@ -63,7 +63,7 @@ def main():
         result = dict()
     for gene in gene_list:
         if gene in result:
-            print(f'skipping {gene}')
+            print(f"skipping {gene}")
             continue
         print(gene)
         try:
@@ -74,5 +74,5 @@ def main():
             print(ex)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
