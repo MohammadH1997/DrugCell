@@ -40,15 +40,6 @@ def update_blosum_penalty(file_path):
                                        port=os.environ["DB_PORT"],
                                        )
 
-    # conn = psycopg2.connect(
-    #     dbname="postgres",
-    #     user="root",
-    #     password="Muy1sTSNpnkjXalbQwVUDnBE",
-    #     host="etna.liara.cloud",
-    #     port="34965"
-    # )
-    # cursor = conn.cursor()
-
     def _update(data, i=0):
         update_query = """
             UPDATE cosmic.cell_line_mutations
@@ -136,6 +127,6 @@ def update_transcript_seq_length():
 
 
 # Call the function with the path to your file
-file_path = "/home/mohammad/Public/Drug-cell/DrugCell-public/blosum_real_penalties2.csv"
+file_path = "data/blosum_real_penalties2.csv"
 update_blosum_penalty(file_path)
 # update_transcript_seq_length()
