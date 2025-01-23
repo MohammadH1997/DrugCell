@@ -1,11 +1,11 @@
 #!/bin/bash
 inputdir="../data/"
 gene2idfile=$inputdir"gene2ind.txt"
-cell2idfile=$inputdir"cell2ind.txt"
+cell2idfile=$inputdir"cell2ind_2.txt"
 drug2idfile=$inputdir"drug2ind.txt"
-testdatafile=$inputdir"drugcell_test.txt"
+testdatafile=$inputdir"drugcell_test_2.txt"
 
-mutationfile=$inputdir"cell2mutation.txt"
+mutationfile=$inputdir"cell2mutation_2.txt"
 drugfile=$inputdir"drug2fingerprint.txt"
 
 modelfile="../pretrained_model/drugcell_v1.pt"
