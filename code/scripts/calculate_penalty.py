@@ -286,7 +286,7 @@ def blosum_penalty(seq1, seq2, gap_open=-10, gap_extend=-1):
     return total_score
 
 
-def process_mutation(record):
+def process_mutation(record, apply_mut: bool = True):
     gene_name = record["gene"]
     transcript_id = record["transcript"].split(".")[0]  # Remove version number
     aa_mutation = record["aa_mutation"]
@@ -312,20 +312,23 @@ def process_mutation(record):
 
         # Apply the mutation
         print("process_mutation apply_mutation start")
-        # mutated_seq = apply_mutation(protein_seq, aa_mutation)
-        mutated_seq = protein_seq
+        mutated_seq = apply_mutation(protein_seq, aa_mutation)
+        # mutated_seq = protein_seq
         print("process_mutation apply_mutation end")
 
         # Align the sequences
         print("process_mutation align_sequences start")
         aligned_ref_seq, aligned_mut_seq, alignment_score = align_sequences(protein_seq, mutated_seq)
+        real_aligned_ref_seq, real_aligned_mut_seq, real_alignment_score = align_sequences(protein_seq, protein_seq)
         print("process_mutation align_sequences end")
 
         # Calculate the penalty
         print("process_mutation blosum_penalty start")
         penalty = blosum_penalty(aligned_ref_seq, aligned_mut_seq)
+        real_penalty = blosum_penalty(real_aligned_ref_seq, real_aligned_mut_seq)
         print("process_mutation blosum_penalty end")
         result["blosum_penalty"] = penalty
+        result["real_blosum_penalty"] = real_penalty
 
     except Exception as e:
         result["error"] = str(e)
@@ -341,12 +344,14 @@ def cache_transcript_sequence(transcript_id):
         logging.error(f"{transcript_id} Error {e}")
 
 
+from more_itertools import chunked
+
 if __name__ == "__main__":
     # Read mutations from CSV
-    csv_file = "data/missingrealpenalties2.csv"  # Replace with your CSV file path
+    csv_file = "data/unique_combs.csv"  # Replace with your CSV file path
 
     # old_output_file = "blosum_penalties3.csv"
-    output_file = "data/blosum_real_penalties2.csv"
+    # output_file = "data/blosum_penalties_full.csv"
 
     # Read the mutations into a list of records
     # all_transcripts = set()
@@ -384,30 +389,37 @@ if __name__ == "__main__":
     # executor.shutdown()
 
     # Open the output CSV file for writing
-    with open(output_file, mode="a", newline="") as outfile:
-        fieldnames = ["gene", "transcript", "aa_mutation", "blosum_penalty", "error"]
-        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-        # writer.writeheader()
+    chunk_size = 10_000
+    for start in range(0, len(mutations), chunk_size):
+        if start <= 1_630_000:
+            continue
+        end = start + chunk_size
+        with open(f"data/blosum_penalties_full_{start}_{end}.csv", mode="w", newline="") as outfile:
+            fieldnames = ["gene", "transcript", "aa_mutation", "blosum_penalty", "real_blosum_penalty", "error"]
+            writer = csv.DictWriter(outfile, fieldnames=fieldnames)
 
-        # Use ProcessPoolExecutor to process mutations in parallel
-        with ProcessPoolExecutor(max_workers=5) as executor:
-            # Submit all mutation processing tasks
-            future_to_record = {executor.submit(process_mutation, record): record
-                                for record in mutations}
+            writer.writeheader()
 
-            # Collect the results as they complete
-            for future in as_completed(future_to_record):
-                result = future.result()
-                gene_name = result["gene"]
-                aa_mutation = result["aa_mutation"]
-                penalty = result.get("blosum_penalty")
-                error = result.get("error")
+            # Use ProcessPoolExecutor to process mutations in parallel
+            with ProcessPoolExecutor(max_workers=5) as executor:
+                # Submit all mutation processing tasks
+                future_to_record = {executor.submit(process_mutation, record): record
+                                    for record in mutations[start:end]}
 
-                if error:
-                    print(f"Error processing mutation {aa_mutation} for gene {gene_name}: {error}")
-                else:
-                    print(f"Gene: {gene_name}, Mutation: {aa_mutation}, BLOSUM Penalty: {penalty}")
+                # Collect the results as they complete
+                for future in as_completed(future_to_record):
+                    result = future.result()
+                    gene_name = result["gene"]
+                    aa_mutation = result["aa_mutation"]
+                    penalty = result.get("blosum_penalty")
+                    real_penalty = result.get("real_blosum_penalty")
+                    error = result.get("error")
 
-                # Write the result to the output CSV
-                # if result["transcript"] in remaining_transcripts:
-                writer.writerow(result)
+                    if error:
+                        print(f"Error processing mutation {aa_mutation} for gene {gene_name}: {error}")
+                    else:
+                        print(f"Gene: {gene_name}, Mutation: {aa_mutation}, BLOSUM Penalty: {penalty}")
+
+                    # Write the result to the output CSV
+                    # if result["transcript"] in remaining_transcripts:
+                    writer.writerow(result)
