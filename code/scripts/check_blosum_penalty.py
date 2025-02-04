@@ -12,15 +12,16 @@ def read_data_from_file(file_path):
     with open(file_path, mode="r", newline="") as infile:
         reader = csv.reader(infile)
         for row in reader:
-            if row[4]:
+            if row[5]:
                 continue
             else:
                 # Assuming the file has columns: gene_name, aa_mutation, transcript, blosum_penalty
                 gene_name = row[0]
-                aa_mutation = row[2]
                 transcript = row[1]
+                aa_mutation = row[2]
                 blosum_penalty = int(float(row[3]))  # Assuming the penalty is in the fourth column
-                data.append((blosum_penalty, gene_name, transcript))
+                real_blosum_penalty = int(float(row[4]))  # Assuming the penalty is in the fourth column
+                data.append((blosum_penalty, real_blosum_penalty, gene_name, transcript))
     print(" data add ")
     return data
 
@@ -43,16 +44,18 @@ def update_blosum_penalty(file_path):
     def _update(data, i=0):
         update_query = """
             UPDATE cosmic.cell_line_mutations
-            SET real_penalty = %s
-            WHERE base_gene_name = %s AND base_transcript = %s ;
+            SET aa_mutation_blosum62_penalty = %s, real_penalty = %s
+            WHERE base_gene_name = %s AND base_transcript = %s 
+            RETURNING id;
         """
         c = conn_pool.getconn()
         cursor = c.cursor()
         for row in data:
             cursor.execute(update_query, row)
         c.commit()
+        print(f"task {i} done:", cursor.fetchall())
         conn_pool.putconn(c)
-        print(f"task {i} done")
+        # print(f"task {i} done")
 
     # Read data from CSV file
     data_to_update = read_data_from_file(file_path)
@@ -76,57 +79,12 @@ def update_blosum_penalty(file_path):
     # conn.close()
 
 
-def update_transcript_seq_length():
-    redis_conn = Redis(host="localhost", port=6379, db=0)
+import os
+import glob
 
-    # s = set(
-    #     """""".split(",")
-    # )
-
-    # Define the prefix to remove
-    prefix = "cds_sequence:"
-    prefix_length = len(prefix)
-
-    # Iterate over the matched keys and extract IDs
-    var_list = [
-        (redis_conn.strlen(x), x.decode("utf-8")[prefix_length:])
-        for x in redis_conn.scan_iter(match="cds_sequence:*")
-        if x.decode("utf-8").startswith(prefix)
-    ]
-
-    print(len(var_list), var_list[:10])
-
-    conn = psycopg2.connect(
-        dbname=os.environ.get("POSTGRES_DB", "postgres"),
-        user=os.environ.get("POSTGRES_USER", "postgres"),
-        password=os.environ.get("POSTGRES_PASSWORD", "<PASSWORD>"),
-        host=os.environ.get("POSTGRES_HOST", "localhost"),
-        port=os.environ.get("POSTGRES_PORT", 5432),
-    )
-    cursor = conn.cursor()
-
-    update_query = """
-        UPDATE cosmic.cell_line_mutations
-        SET transcript_sequence_length = %s
-        WHERE base_transcript = %s ;
-    """
-
-    # cursor.executemany(update_query, var_list)
-    # conn.commit()
-    # cursor.close()
-
-    for count, row in enumerate(var_list):
-        cursor.execute(update_query, row)
-        if count % 100 == 0:
-            conn.commit()
-            print("commit:" + str(count))
-    conn.commit()
-
-    cursor.close()
-    conn.close()
-
+files = glob.glob("data/blosum_penalties_full_*.csv")
 
 # Call the function with the path to your file
-file_path = "data/blosum_real_penalties2.csv"
-update_blosum_penalty(file_path)
+for file in files:
+    update_blosum_penalty(file)
 # update_transcript_seq_length()
